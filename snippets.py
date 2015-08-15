@@ -6,10 +6,6 @@ import psycopg2
 import sys
 
 # Set the log output file, and the log level
-logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
-logging.debug("Connecting to PostgreSQL")
-connection = psycopg2.connect("dbname='snippets' user='ubuntu'")
-logging.debug("Database connection established.")
 
 def main():
 	"""Main function"""
@@ -69,7 +65,14 @@ def get(name):
 	command = "select message from snippets where keyword = %s"
 	cursor.execute(command, (name,))
 	row = cursor.fetchone()
-	return row[0] if row is not None else None
+	cursor.close()
+	connection.commit()
+	return row[0] if row else None
 
 if __name__ == '__main__':
+	logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
+	logging.debug("Connecting to PostgreSQL")
+	connection = psycopg2.connect("dbname='snippets' user='ubuntu'")
+	logging.debug("Database connection established.")
 	main()
+	connection.close()
