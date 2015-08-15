@@ -41,16 +41,23 @@ def main():
 def put(name, snippet):
 	"""
 	Store a snippet with an associated name.
-
 	Returns the name and the snippet
 	"""
 	logging.debug("Storing snippet into database {!r} {!r}".format(name, snippet))
 	cursor = connection.cursor()
 	command = "insert into snippets values (%s, %s)"
-	cursor.execute(command, (name, snippet))
-	cursor.close()
-	connection.commit()
-	logging.debug("Snippet stored successfully.");
+	try:
+		cursor.execute(command, (name, snippet))
+	except psycopg2.IntegrityError as e:
+		print e
+		print "Issuing rollback and attempting an update instead"
+		connection.rollback()
+		command = "update snippets set message = %s where keyword = %s"
+		cursor.execute(command, (snippet, name))
+		connection.commit()
+		logging.debug("Snippet stored successfully.");
+	finally:
+		cursor.close()
 	
 	return name, snippet
 
