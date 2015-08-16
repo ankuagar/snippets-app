@@ -20,6 +20,7 @@ def main():
     put_parser.add_argument("name", help="The name of the snippet")
     put_parser.add_argument("snippet", help="The snippet text")
     put_parser.add_argument("--hide", help="Indicate if this entry should be hidden during catalog and contains operations", action='store_true')
+    put_parser.add_argument("--unhide", help="Reset the hidden status of the entry during catalog and contains operations", action='store_true')
 
     # Subparser for the get command 
     logging.debug("Constructing get subparser")
@@ -37,8 +38,16 @@ def main():
     
     arguments = parser.parse_args()
 
-    print arguments
     if arguments.command == "put":
+            if arguments.unhide and arguments.hide:
+                '''
+                unhide hide hidden
+                F       F   F
+                T       T   F
+                F       T   T
+                T       F   F
+                '''
+                arguments.hide = False
             name, snippet = put(arguments.name, arguments.snippet, arguments.hide)
             print("Stored {!r} as {!r}".format(snippet, name))
     elif arguments.command == "get":
