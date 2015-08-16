@@ -19,6 +19,7 @@ def main():
     put_parser = subparsers.add_parser("put", help="Store a snippet")
     put_parser.add_argument("name", help="The name of the snippet")
     put_parser.add_argument("snippet", help="The snippet text")
+    put_parser.add_argument("--hide", help="Indicate if this entry should be hidden during catalog and contains operations", action='store_true')
 
     # Subparser for the get command 
     logging.debug("Constructing get subparser")
@@ -34,23 +35,20 @@ def main():
     contains_parser = subparsers.add_parser("contains", help="Print a catalog of snippet messages containing a given string")
     contains_parser.add_argument("searchstr", help="The string that should be contained in the snippet messages")
     
-    arguments = parser.parse_args(sys.argv[1:])
+    arguments = parser.parse_args()
 
-    # Convert parsed arguments from Namespace to dictionary
-    arguments = vars(arguments)
-    command = arguments.pop("command")
-
-    if command == "put":
-            name, snippet = put(**arguments)
+    print arguments
+    if arguments.command == "put":
+            name, snippet = put(arguments.name, arguments.snippet, arguments.hide)
             print("Stored {!r} as {!r}".format(snippet, name))
-    elif command == "get":
-            snippet = get(**arguments)
+    elif arguments.command == "get":
+            snippet = get(arguments.name)
             print("Retrieved snippet: {!r}".format(snippet))
-    elif command == "catalog":
+    elif arguments.command == "catalog":
             catalog()
             print("Retrieved all snippet keywords for user to browse")
-    elif command == "contains":
-            contains(**arguments)
+    elif arguments.command == "contains":
+            contains(arguments.searchstr)
             print("Retrieved all snippets containing the given string")
 
 def contains(searchstr):
@@ -58,7 +56,7 @@ def contains(searchstr):
     Display all the snippets containing a given string
     """
     logging.debug("Getting all snippets containing a given string")     
-    command = "select message from snippets where message like \'%" + searchstr + "%\'"
+    command = "select message from snippets where message like \'%" + searchstr + "%\' and not hidden"
     try:
         with connection, connection.cursor() as cursor:
             cursor.execute(command)
@@ -76,7 +74,7 @@ def catalog():
     for the user to browse through
     """
     logging.debug("Getting all snippet keywords")
-    command = "select keyword from snippets order by keyword asc"
+    command = "select keyword from snippets where not hidden order by keyword asc"
     try:
         with connection, connection.cursor() as cursor:
             cursor.execute(command)
@@ -86,24 +84,24 @@ def catalog():
     except psycopg2.Error as e:
         print e
     
-def put(name, snippet):
+def put(name, snippet, hidden):
     """
     Store a snippet with an associated name.
     Returns the name and the snippet
     """
-    logging.debug("Storing snippet into database {!r} {!r}".format(name, snippet))
-    command = "insert into snippets values (%s, %s)"
+    logging.debug("Storing snippet into database {!r} {!r} {!r}".format(name, snippet, hidden))
+    command = "insert into snippets values (%s, %s, %s)"
     try:
         with connection, connection.cursor() as cursor:
-            cursor.execute(command, (name, snippet))
+            cursor.execute(command, (name, snippet, hidden))
         logging.debug("Snippet stored successfully.");
 
     except psycopg2.IntegrityError as e:
         print e
         print "Attempting an update instead"
-        command = "update snippets set message = %s where keyword = %s"
+        command = "update snippets set message = %s, hidden = %s where keyword = %s"
         with connection, connection.cursor() as cursor:
-             cursor.execute(command, (snippet, name))
+             cursor.execute(command, (snippet, hidden, name))
         logging.debug("Snippet updated successfully.");
     
     return name, snippet
