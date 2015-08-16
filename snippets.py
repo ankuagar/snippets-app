@@ -24,6 +24,8 @@ def main():
     get_parser = subparsers.add_parser("get", help="Get a snippet")
     get_parser.add_argument("name", help="The name of the snippet")
 
+    get_parser = subparsers.add_parser("catalog", help="Print a catalog of snippet keywords")
+    
     arguments = parser.parse_args(sys.argv[1:])
 
     # Convert parsed arguments from Namespace to dictionary
@@ -37,7 +39,26 @@ def main():
     elif command == "get":
             snippet = get(**arguments)
             print("Retrieved snippet: {!r}".format(snippet))
+    elif command == "catalog":
+            catalog()
+            print("Retrieved all snippet keywords for user to browse")
 
+def catalog():
+    """
+    Display a catalog of all snippet keywords 
+    for the user to browse through
+    """
+    logging.debug("Getting all snippet keywords from database")
+    command = "select keyword from snippets order by keyword asc"
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+            for row in rows:
+                print row[0]
+    except psycopg2.Error as e:
+        print e
+    
 def put(name, snippet):
     """
     Store a snippet with an associated name.
