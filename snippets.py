@@ -19,19 +19,26 @@ def main():
     put_parser = subparsers.add_parser("put", help="Store a snippet")
     put_parser.add_argument("name", help="The name of the snippet")
     put_parser.add_argument("snippet", help="The snippet text")
+
     # Subparser for the get command 
     logging.debug("Constructing get subparser")
     get_parser = subparsers.add_parser("get", help="Get a snippet")
     get_parser.add_argument("name", help="The name of the snippet")
 
-    get_parser = subparsers.add_parser("catalog", help="Print a catalog of snippet keywords")
+    # Subparser for the catalog command 
+    logging.debug("Constructing catalog subparser")
+    catalog_parser = subparsers.add_parser("catalog", help="Print a catalog of snippet keywords")
+    
+    # Subparser for the contains command 
+    logging.debug("Constructing contains subparser")
+    contains_parser = subparsers.add_parser("contains", help="Print a catalog of snippet messages containing a given string")
+    contains_parser.add_argument("searchstr", help="The string that should be contained in the snippet messages")
     
     arguments = parser.parse_args(sys.argv[1:])
 
     # Convert parsed arguments from Namespace to dictionary
     arguments = vars(arguments)
     command = arguments.pop("command")
-
 
     if command == "put":
             name, snippet = put(**arguments)
@@ -42,13 +49,33 @@ def main():
     elif command == "catalog":
             catalog()
             print("Retrieved all snippet keywords for user to browse")
+    elif command == "contains":
+            contains(**arguments)
+            print("Retrieved all snippets containing the given string")
+
+def contains(searchstr):
+    """
+    Display all the snippets containing a given string
+    """
+    logging.debug("Getting all snippets containing a given string")     
+    command = "select message from snippets where message like \'%" + searchstr + "%\'"
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+            for row in rows:
+                print row[0]
+                print "snippet message: %s" % row[0]
+            print
+    except psycopg2.Error as e:
+        print e
 
 def catalog():
     """
     Display a catalog of all snippet keywords 
     for the user to browse through
     """
-    logging.debug("Getting all snippet keywords from database")
+    logging.debug("Getting all snippet keywords")
     command = "select keyword from snippets order by keyword asc"
     try:
         with connection, connection.cursor() as cursor:
